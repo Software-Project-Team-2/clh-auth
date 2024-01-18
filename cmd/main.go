@@ -1,25 +1,21 @@
 package main
 
 import (
-	"github.com/Software-Project-Team-2/clh-auth/internal/pb/auth"
+	"github.com/Software-Project-Team-2/clh-auth/internal/auth_service"
+	clh_auth "github.com/Software-Project-Team-2/clh-auth/internal/pb/auth"
 	"google.golang.org/grpc"
 	"log"
 	"net"
 )
 
-type server struct {
-	clh_auth.UnimplementedInventoryServer
-}
-
 func main() {
 	listener, err := net.Listen("tcp", ":8080")
 	if err != nil {
-		panic(err)
+		log.Fatalf("failed to listen: %v", err)
 	}
-
-	s := grpc.NewServer()
-	clh_auth.RegisterInventoryServer(s, &server{})
-	if err := s.Serve(listener); err != nil {
+	grpcServer := grpc.NewServer()
+	clh_auth.RegisterAuthServiceServer(grpcServer, &auth_service.AuthService{})
+	if err := grpcServer.Serve(listener); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}
 }

@@ -2,16 +2,24 @@ syntax = "proto3";
 
 option go_package = "github.com/Software-Project-Team-2/clh-auth";
 
-message Book {
-  string title = 1;
-  string author = 2;
-  int32 page_count = 3;
-  optional string language = 4;
+service AuthService {
+    rpc Login(LoginRequest) returns (LoginResponse);
+    rpc ValidateToken(ValidateRequest) returns (ValidateResponse);
 }
 
-message GetBookListRequest {}
-message GetBookListResponse { repeated Book books = 1; }
+message LoginRequest {
+    string username = 1;
+    string password = 2;
+}
 
-service Inventory {
-  rpc GetBookList(GetBookListRequest) returns (GetBookListResponse) {}
+message LoginResponse {
+    string token = 1;
+}
+
+message ValidateRequest {
+    string token = 1;
+}
+
+message ValidateResponse {
+    bool valid = 1;
 }
