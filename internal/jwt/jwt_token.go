@@ -1,8 +1,11 @@
 package jwt
 
-import "github.com/dgrijalva/jwt-go"
+import (
+	"github.com/dgrijalva/jwt-go"
+	"os"
+)
 
-var jwtKey = []byte("your_secret_key") // Define this key securely
+var jwtKey = []byte(os.Getenv("JWT_SECRET_TOKEN"))
 
 func generateJWT(id uint, username string) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
@@ -25,4 +28,3 @@ func validateToken(tokenString string) bool {
 
 	return token.Valid
 }
-

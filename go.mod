@@ -1,15 +1,18 @@
-module example.com/mod
+module github.com/Software-Project-Team-2/clh-auth
 
 go 1.21.5
 
 require (
-	github.com/cespare/xxhash/v2 v2.1.2 // indirect
-	github.com/dgrijalva/jwt-go v3.2.0+incompatible // indirect
-	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
-	github.com/go-redis/redis/v8 v8.11.4 // indirect
-	github.com/go-session/redis/v3 v3.1.0 // indirect
-	github.com/go-session/session/v3 v3.1.5 // indirect
-	github.com/json-iterator/go v1.1.12 // indirect
-	github.com/modern-go/concurrent v0.0.0-20180228061459-e0a39a4cb421 // indirect
-	github.com/modern-go/reflect2 v1.0.2 // indirect
+	github.com/dgrijalva/jwt-go v3.2.0+incompatible
+	google.golang.org/grpc v1.60.1
+	google.golang.org/protobuf v1.32.0
+)
+
+require (
+	github.com/golang/protobuf v1.5.3 // indirect
+	golang.org/x/net v0.16.0 // indirect
+	golang.org/x/sys v0.13.0 // indirect
+	golang.org/x/text v0.13.0 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20231002182017-d307bd883b97 // indirect
+
 )
