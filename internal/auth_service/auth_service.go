@@ -13,7 +13,10 @@ type AuthService struct {
 // TODO: implement ../jwt/jwt_token.go
 
 func (s *AuthService) Login(ctx context.Context, req *clh_auth.LoginRequest) (*clh_auth.LoginResponse, error) {
-	log.Printf("Login request: %v", req)
+
+	s2, s3 := req.GetUsername(), req.GetPassword()
+	log.Printf("name: %v pass %v", s2, s3)
+
 	return &clh_auth.LoginResponse{Token: "sample_token"}, nil
 }
 
