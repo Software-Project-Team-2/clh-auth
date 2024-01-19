@@ -7,7 +7,7 @@ import (
 
 var jwtKey = []byte(os.Getenv("JWT_SECRET_TOKEN"))
 
-func generateJWT(id uint, username string) (string, error) {
+func GenerateJWT(id uint, username string) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"id":       id,
 		"username": username,
@@ -17,7 +17,7 @@ func generateJWT(id uint, username string) (string, error) {
 	return tokenString, err
 }
 
-func validateToken(tokenString string) bool {
+func ValidateToken(tokenString string) bool {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		return jwtKey, nil
 	})
