@@ -1,53 +1,40 @@
 package main
 
 import (
-	"context"
-	"fmt"
-	"net/http"
-
-	"github.com/go-session/redis/v3"
-	"github.com/go-session/session/v3"
+	"github.com/Software-Project-Team-2/clh-auth/internal/auth_service"
+	clh_auth "github.com/Software-Project-Team-2/clh-auth/internal/pb/auth"
+	"github.com/Software-Project-Team-2/clh-auth/internal/redis_client"
+	"google.golang.org/grpc"
+	"log"
+	"net"
+	"os"
 )
 
 func main() {
-	session.InitManager(
-		session.SetStore(redis.NewRedisStore(&redis.Options{
-			Addr: "127.0.0.1:6379",
-			DB:   15,
-		})),
-	)
+	_, jwtTokenIsPresent := os.LookupEnv("JWT_SECRET_TOKEN")
+	_, isProduction := os.LookupEnv("IS_PRODUCTION")
 
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		store, err := session.Start(context.Background(), w, r)
-		if err != nil {
-			fmt.Fprint(w, err)
-			return
-		}
+	if jwtTokenIsPresent == false && isProduction == true {
+		log.Panic("Please set up a env variable for JWT token: \"JWT_SECRET_TOKEN\"")
+	}
 
-		store.Set("foo", "bar")
-		err = store.Save()
-		if err != nil {
-			fmt.Fprint(w, err)
-			return
-		}
+	if jwtTokenIsPresent == false {
+		os.Setenv("JWT_SECRET_TOKEN", "ahd8fee2ohboTh8eS9eeyoosaine3ohK") // Please do not do this for prod)))
+	}
 
-		http.Redirect(w, r, "/foo", 302)
-	})
+	redis_client.InitClient("localhost:6379")
 
-	http.HandleFunc("/foo", func(w http.ResponseWriter, r *http.Request) {
-		store, err := session.Start(context.Background(), w, r)
-		if err != nil {
-			fmt.Fprint(w, err)
-			return
-		}
+	listener, err := net.Listen("tcp", ":8080")
 
-		foo, ok := store.Get("foo")
-		if ok {
-			fmt.Fprintf(w, "foo:%s", foo)
-			return
-		}
-		fmt.Fprint(w, "does not exist")
-	})
+	if err != nil {
+		log.Fatalf("failed to listen: %v", err)
+	}
 
-	http.ListenAndServe(":8080", nil)
+	grpcServer := grpc.NewServer()
+
+	clh_auth.RegisterAuthServiceServer(grpcServer, &auth_service.AuthService{})
+
+	if err := grpcServer.Serve(listener); err != nil {
+		log.Fatalf("failed to serve: %v", err)
+	}
 }
