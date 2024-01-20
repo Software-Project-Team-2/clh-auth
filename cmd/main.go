@@ -13,6 +13,21 @@ import (
 func main() {
 	_, jwtTokenIsPresent := os.LookupEnv("JWT_SECRET_TOKEN")
 	_, isProduction := os.LookupEnv("IS_PRODUCTION")
+	_, redisHostIsPresent := os.LookupEnv("REDIS_HOST")
+	_, redisPasswordIsPresent := os.LookupEnv("REDIS_PASSWORD")
+	_, redisDbIsPresent := os.LookupEnv("REDIS_DB")
+
+	if redisHostIsPresent == false {
+		log.Panic("REDIS_HOST env is undefined")
+	}
+
+	if redisPasswordIsPresent == false {
+		os.Setenv("REDIS_PASSWORD", "")
+	}
+
+	if redisDbIsPresent == false {
+		os.Setenv("REDIS_DB", "0")
+	}
 
 	if jwtTokenIsPresent == false && isProduction == true {
 		log.Panic("Please set up a env variable for JWT token: \"JWT_SECRET_TOKEN\"")
