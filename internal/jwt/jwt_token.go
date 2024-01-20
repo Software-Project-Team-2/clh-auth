@@ -2,9 +2,8 @@ package jwt
 
 import (
 	"fmt"
-	"os"
-
 	"github.com/dgrijalva/jwt-go"
+	"os"
 )
 
 var jwtKey = []byte(os.Getenv("JWT_SECRET_TOKEN"))
