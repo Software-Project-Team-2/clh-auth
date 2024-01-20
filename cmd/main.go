@@ -5,6 +5,7 @@ import (
 	clh_auth "github.com/Software-Project-Team-2/clh-auth/internal/pb/auth"
 	"github.com/Software-Project-Team-2/clh-auth/internal/redis_client"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 	"log"
 	"net"
 	"os"
@@ -46,6 +47,10 @@ func main() {
 	}
 
 	grpcServer := grpc.NewServer()
+
+	if isProduction == false {
+		reflection.Register(grpcServer)
+	}
 
 	clh_auth.RegisterAuthServiceServer(grpcServer, &auth_service.AuthService{})
 
