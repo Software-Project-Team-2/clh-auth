@@ -1,13 +1,15 @@
 package jwt
 
 import (
-	"github.com/dgrijalva/jwt-go"
+	"fmt"
 	"os"
+
+	"github.com/dgrijalva/jwt-go"
 )
 
 var jwtKey = []byte(os.Getenv("JWT_SECRET_TOKEN"))
 
-func GenerateJWT(id uint, username string) (string, error) {
+func GenerateJWT(id int64, username string) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"id":       id,
 		"username": username,
@@ -15,6 +17,26 @@ func GenerateJWT(id uint, username string) (string, error) {
 
 	tokenString, err := token.SignedString(jwtKey)
 	return tokenString, err
+}
+
+func ParseUserFromToken(tokenString string) (*jwt.MapClaims, bool) {
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+
+		return jwtKey, nil
+	})
+
+	if err != nil {
+		return nil, false
+	}
+
+	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+		return &claims, true
+	} else {
+		return nil, false
+	}
 }
 
 func ValidateToken(tokenString string) bool {
