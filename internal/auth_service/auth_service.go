@@ -6,6 +6,7 @@ import (
 	"github.com/Software-Project-Team-2/clh-auth/internal/entities"
 	"github.com/Software-Project-Team-2/clh-auth/internal/jwt"
 	clh_auth "github.com/Software-Project-Team-2/clh-auth/internal/pb/auth"
+	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -55,7 +56,12 @@ func (s *AuthService) CreateUser(ctx context.Context, req *clh_auth.CreateUserRe
 		return nil, status.Errorf(codes.AlreadyExists, "user with this email already exists")
 	}
 
-	user := entities.User{Password: req.GetPassword(), Name: req.GetUsername(), Email: "test@example.com", Permission: 0}
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.GetPassword()), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "could not hash password")
+	}
+
+	user := entities.User{Password: string(hashedPassword), Name: req.GetUsername(), Email: "test@example.com", Permission: 0}
 	userId := GenerateUserId()
 
 	err = CreateUserHashRedis(userId, user)
@@ -108,11 +114,17 @@ func (s AuthService) GetUserPermissions(ctx context.Context, req *clh_auth.UserP
 
 func validateUserCredentials(email, password string) (bool, error) {
 	u, err := GetUserProfileByEmail(email)
-
 	if err != nil {
 		fmt.Printf("%v", err)
 		return false, err
 	}
 
-	return u.Password == password, nil
+	err = bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(password))
+	if err != nil {
+		// If there's an error, it means the passwords don't match
+		// This could be a bcrypt-specific error or simply a mismatch
+		return false, nil // Return false but nil error if it's just a mismatch
+	}
+
+	return true, nil
 }
