@@ -3,8 +3,6 @@ package auth_service
 import (
 	"context"
 	"fmt"
-	"log"
-
 	"github.com/Software-Project-Team-2/clh-auth/internal/entities"
 	"github.com/Software-Project-Team-2/clh-auth/internal/jwt"
 	clh_auth "github.com/Software-Project-Team-2/clh-auth/internal/pb/auth"
@@ -21,22 +19,19 @@ func (s *AuthService) Login(ctx context.Context, req *clh_auth.LoginRequest) (*c
 	email, password := req.GetEmail(), req.GetPassword()
 
 	credentials, err := validateUserCredentials(email, password)
-	if err != nil {
-		log.Fatal(err)
-	}
 	if !credentials {
 		return nil, status.Error(codes.Unauthenticated, "invalid username or password")
 	}
 
 	i, err := GetUserIdByEmail(email)
 	if err != nil {
-		log.Fatal(err)
+		return nil, status.Error(codes.Aborted, "Not able to get userid from email")
 	}
 
-	token, err2 := jwt.GenerateJWT(i, email)
+	token, err := jwt.GenerateJWT(i, email)
 
-	if err2 != nil {
-		log.Fatalf("Unable to generate JWT token: %v", err2)
+	if err != nil {
+		return nil, status.Error(codes.Aborted, "Unable to generate JWT token")
 	}
 
 	return &clh_auth.LoginResponse{Token: token}, nil
@@ -60,7 +55,7 @@ func (s *AuthService) CreateUser(ctx context.Context, req *clh_auth.CreateUserRe
 		return nil, status.Errorf(codes.AlreadyExists, "user with this email already exists")
 	}
 
-	user := entities.User{Password: req.GetPassword(), Name: req.GetUsername(), Email: "test@example.com"}
+	user := entities.User{Password: req.GetPassword(), Name: req.GetUsername(), Email: "test@example.com", Permission: 0}
 	userId := GenerateUserId()
 
 	err = CreateUserHashRedis(userId, user)
