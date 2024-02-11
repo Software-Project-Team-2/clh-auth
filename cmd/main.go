@@ -38,7 +38,7 @@ func main() {
 		os.Setenv("JWT_SECRET_TOKEN", "ahd8fee2ohboTh8eS9eeyoosaine3ohK") // Please do not do this for prod)))
 	}
 
-	redis_client.InitClient("localhost:6379")
+	redis_client.InitClient()
 
 	listener, err := net.Listen("tcp", ":8080")
 

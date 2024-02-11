@@ -1,7 +1,6 @@
 package redis_client
 
 import (
-	"context"
 	"os"
 	"strconv"
 
@@ -9,9 +8,8 @@ import (
 )
 
 var client *redis.Client
-var ctx = context.Background()
 
-func InitClient(addr string) {
+func InitClient() {
 	redisDb, err := strconv.Atoi(os.Getenv("REDIS_DB"))
 	if err != nil {
 		panic(err)
