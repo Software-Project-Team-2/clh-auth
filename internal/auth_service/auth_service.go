@@ -34,6 +34,7 @@ func (s *AuthService) Login(ctx context.Context, req *clh_auth.LoginRequest) (*c
 	if err2 != nil {
 		fmt.Printf("Unable to generate JWT token: %v", err2)
 	}
+
 	return &clh_auth.LoginResponse{Token: token}, nil
 }
 

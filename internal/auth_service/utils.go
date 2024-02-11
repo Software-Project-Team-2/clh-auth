@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"github.com/redis/go-redis/v9"
 	"net/mail"
 	"strconv"
 
@@ -34,22 +36,23 @@ func LinkUserEmailWithId(email string, userId int64) error {
 }
 
 func GetUserIdByEmail(email string) (int64, error) {
-	rdb := redis_client.GetClient()
+	rdb := redis_client.GetClient() // Assuming redis_client.GetClient is correctly set up to return a *redis.Client
 	ctx := context.Background()
 
 	result, err := rdb.Get(ctx, "user_profile:"+email).Result()
-	if err != nil {
+	if errors.Is(err, redis.Nil) {
+		return 0, fmt.Errorf("no user found with email: %s", email)
+	} else if err != nil {
 		return 0, err
 	}
 
 	userID, err := strconv.ParseInt(result, 10, 64)
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("error parsing userID for email %s: %v", email, err)
 	}
 
 	return userID, nil
 }
-
 func GetUserHashRedis(id int) (*entities.User, error) {
 	var ctx = context.Background()
 
