@@ -6,7 +6,7 @@ service AuthService {
     rpc Login(LoginRequest) returns (LoginResponse);
     rpc CreateUser(CreateUserRequest) returns (CreateUserResponse);
     rpc ValidateToken(ValidateRequest) returns (ValidateResponse);
-    rpc GetUserRole(UserPermissionsRequest) returns (UserPermissionsResponse);
+    rpc GetUserPermissions(UserPermissionsRequest) returns (UserPermissionsResponse);
 }
 
 message UserPermissionsRequest{
