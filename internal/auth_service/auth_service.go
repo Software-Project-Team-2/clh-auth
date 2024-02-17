@@ -78,11 +78,27 @@ func (s *AuthService) CreateUser(ctx context.Context, req *clh_auth.CreateUserRe
 	return &clh_auth.CreateUserResponse{Success: true, Message: "User has been created!"}, nil
 }
 
-func (s *AuthService) ValidateToken(ctx context.Context, req *clh_auth.ValidateRequest) (*clh_auth.ValidateResponse, error) {
+func (s *AuthService) ValidateToken(_ context.Context, req *clh_auth.ValidateRequest) (*clh_auth.ValidateResponse, error) {
+	claims, ok := jwt.ParseUserFromToken(req.GetToken())
+	if !ok {
+		return nil, fmt.Errorf("invalid or expired token")
+	}
 
+	userID, ok := (*claims)["id"].(float64)
+	if !ok {
+		return nil, fmt.Errorf("user ID not found in token")
+	}
+
+	userIDInt := int64(userID)
+	userProfile, err := GetUserHashRedis(int(userIDInt))
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch user profile: %v", err)
+	}
+
+	permissions := clh_auth.UserPermissionsResponse{Permissions: int32(userProfile.Permission)}
 	isValid := jwt.ValidateToken(req.GetToken())
 
-	return &clh_auth.ValidateResponse{Valid: isValid}, nil
+	return &clh_auth.ValidateResponse{Valid: isValid, Permissions: &permissions}, nil
 }
 
 func (s AuthService) GetUserPermissions(ctx context.Context, req *clh_auth.UserPermissionsRequest) (*clh_auth.UserPermissionsResponse, error) {
@@ -121,9 +137,7 @@ func validateUserCredentials(email, password string) (bool, error) {
 
 	err = bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(password))
 	if err != nil {
-		// If there's an error, it means the passwords don't match
-		// This could be a bcrypt-specific error or simply a mismatch
-		return false, nil // Return false but nil error if it's just a mismatch
+		return false, nil
 	}
 
 	return true, nil

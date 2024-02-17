@@ -44,4 +44,5 @@ message LoginResponse {
 
 message ValidateResponse {
     bool valid = 1;
+    UserPermissionsResponse permissions = 2;
 }
