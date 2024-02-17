@@ -17,6 +17,11 @@ func main() {
 	_, redisHostIsPresent := os.LookupEnv("REDIS_HOST")
 	_, redisPasswordIsPresent := os.LookupEnv("REDIS_PASSWORD")
 	_, redisDbIsPresent := os.LookupEnv("REDIS_DB")
+	_, adminTokenIsPresent := os.LookupEnv("ADMIN_TOKEN")
+
+	if adminTokenIsPresent == false {
+		log.Panic("ADMIN_TOKEN env is undefined")
+	}
 
 	if redisHostIsPresent == false {
 		log.Panic("REDIS_HOST env is undefined")

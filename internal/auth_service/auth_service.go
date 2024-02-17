@@ -9,6 +9,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"os"
 )
 
 type AuthService struct {
@@ -16,7 +17,6 @@ type AuthService struct {
 }
 
 func (s *AuthService) Login(ctx context.Context, req *clh_auth.LoginRequest) (*clh_auth.LoginResponse, error) {
-
 	email, password := req.GetEmail(), req.GetPassword()
 
 	credentials, err := validateUserCredentials(email, password)
@@ -79,6 +79,12 @@ func (s *AuthService) CreateUser(ctx context.Context, req *clh_auth.CreateUserRe
 }
 
 func (s *AuthService) ValidateToken(_ context.Context, req *clh_auth.ValidateRequest) (*clh_auth.ValidateResponse, error) {
+	if req.GetToken() == os.Getenv("ADMIN_TOKEN") {
+		return &clh_auth.ValidateResponse{
+			Valid:       true,
+			Permissions: &clh_auth.UserPermissionsResponse{Permissions: 2}}, nil
+	}
+
 	claims, ok := jwt.ParseUserFromToken(req.GetToken())
 	if !ok {
 		return nil, fmt.Errorf("invalid or expired token")
@@ -102,6 +108,13 @@ func (s *AuthService) ValidateToken(_ context.Context, req *clh_auth.ValidateReq
 }
 
 func (s AuthService) GetUserPermissions(ctx context.Context, req *clh_auth.UserPermissionsRequest) (*clh_auth.UserPermissionsResponse, error) {
+	//check for Admin JWT token
+	if req.GetToken() == os.Getenv("ADMIN_TOKEN") {
+		return &clh_auth.UserPermissionsResponse{
+			Permissions: int32(2),
+		}, nil
+	}
+
 	// Parse the JWT token from the request
 	claims, ok := jwt.ParseUserFromToken(req.GetToken())
 	if !ok {
