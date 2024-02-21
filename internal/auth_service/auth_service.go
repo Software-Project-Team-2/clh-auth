@@ -3,12 +3,13 @@ package auth_service
 import (
 	"context"
 	"fmt"
-
 	"github.com/Software-Project-Team-2/clh-auth/internal/entities"
 	"github.com/Software-Project-Team-2/clh-auth/internal/jwt"
 	clh_auth "github.com/Software-Project-Team-2/clh-auth/internal/pb/auth"
+	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"os"
 )
 
 type AuthService struct {
@@ -16,24 +17,24 @@ type AuthService struct {
 }
 
 func (s *AuthService) Login(ctx context.Context, req *clh_auth.LoginRequest) (*clh_auth.LoginResponse, error) {
-
 	email, password := req.GetEmail(), req.GetPassword()
 
-	if !validateUserCredentials(email, password) {
+	credentials, err := validateUserCredentials(email, password)
+	if !credentials {
 		return nil, status.Error(codes.Unauthenticated, "invalid username or password")
 	}
 
 	i, err := GetUserIdByEmail(email)
+	if err != nil {
+		return nil, status.Error(codes.Aborted, "Not able to get userid from email")
+	}
+
+	token, err := jwt.GenerateJWT(i, email)
 
 	if err != nil {
-		fmt.Printf("Unable to parse it : %v", err)
+		return nil, status.Error(codes.Aborted, "Unable to generate JWT token")
 	}
 
-	token, err2 := jwt.GenerateJWT(i, email)
-
-	if err2 != nil {
-		fmt.Printf("Unable to generate JWT token: %v", err2)
-	}
 	return &clh_auth.LoginResponse{Token: token}, nil
 }
 
@@ -55,29 +56,102 @@ func (s *AuthService) CreateUser(ctx context.Context, req *clh_auth.CreateUserRe
 		return nil, status.Errorf(codes.AlreadyExists, "user with this email already exists")
 	}
 
-	user := entities.User{Password: req.GetPassword(), Name: req.GetUsername(), Email: "test@example.com"}
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.GetPassword()), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "could not hash password")
+	}
+
+	user := entities.User{Password: string(hashedPassword), Name: req.GetUsername(), Email: "test@example.com", Permission: 0}
 	userId := GenerateUserId()
 
-	CreateUserHashRedis(userId, user)
-	LinkUserEmailWithId(req.Email, userId)
+	err = CreateUserHashRedis(userId, user)
+	if err != nil {
+		return nil, err
+
+	}
+
+	err = LinkUserEmailWithId(req.Email, userId)
+	if err != nil {
+		return nil, err
+	}
 
 	return &clh_auth.CreateUserResponse{Success: true, Message: "User has been created!"}, nil
 }
 
-func (s *AuthService) ValidateToken(ctx context.Context, req *clh_auth.ValidateRequest) (*clh_auth.ValidateResponse, error) {
-
-	isValid := jwt.ValidateToken(req.GetToken())
-
-	return &clh_auth.ValidateResponse{Valid: isValid}, nil
-}
-
-func validateUserCredentials(email, password string) bool {
-	u, err := GetUserProfileByEmail(email)
-
-	if err != nil {
-		fmt.Printf("%v", err)
-		return false
+func (s *AuthService) ValidateToken(_ context.Context, req *clh_auth.ValidateRequest) (*clh_auth.ValidateResponse, error) {
+	if req.GetToken() == os.Getenv("ADMIN_TOKEN") {
+		return &clh_auth.ValidateResponse{
+			Valid:       true,
+			Permissions: &clh_auth.UserPermissionsResponse{Permissions: 2}}, nil
 	}
 
-	return u.Password == password
+	claims, ok := jwt.ParseUserFromToken(req.GetToken())
+	if !ok {
+		return nil, fmt.Errorf("invalid or expired token")
+	}
+
+	userID, ok := (*claims)["id"].(float64)
+	if !ok {
+		return nil, fmt.Errorf("user ID not found in token")
+	}
+
+	userIDInt := int64(userID)
+	userProfile, err := GetUserHashRedis(int(userIDInt))
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch user profile: %v", err)
+	}
+
+	permissions := clh_auth.UserPermissionsResponse{Permissions: int32(userProfile.Permission)}
+	isValid := jwt.ValidateToken(req.GetToken())
+
+	return &clh_auth.ValidateResponse{Valid: isValid, Permissions: &permissions}, nil
+}
+
+func (s AuthService) GetUserPermissions(ctx context.Context, req *clh_auth.UserPermissionsRequest) (*clh_auth.UserPermissionsResponse, error) {
+	//check for Admin JWT token
+	if req.GetToken() == os.Getenv("ADMIN_TOKEN") {
+		return &clh_auth.UserPermissionsResponse{
+			Permissions: int32(2),
+		}, nil
+	}
+
+	// Parse the JWT token from the request
+	claims, ok := jwt.ParseUserFromToken(req.GetToken())
+	if !ok {
+		return nil, fmt.Errorf("invalid or expired token")
+	}
+
+	userID, ok := (*claims)["id"].(float64)
+	if !ok {
+		return nil, fmt.Errorf("user ID not found in token")
+	}
+
+	userIDInt := int64(userID)
+	userProfile, err := GetUserHashRedis(int(userIDInt))
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch user profile: %v", err)
+	}
+
+	permissions := userProfile.Permission
+
+	response := &clh_auth.UserPermissionsResponse{
+		Permissions: int32(permissions),
+	}
+
+	return response, nil
+}
+
+func validateUserCredentials(email, password string) (bool, error) {
+	u, err := GetUserProfileByEmail(email)
+	if err != nil {
+		fmt.Printf("%v", err)
+		return false, err
+	}
+
+	err = bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(password))
+	if err != nil {
+		return false, nil
+	}
+
+	return true, nil
 }

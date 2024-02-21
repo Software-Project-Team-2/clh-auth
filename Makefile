@@ -1,5 +1,8 @@
 .PHONY: build protoc
 
+run:
+	go run ./cmd/main.go
+
 build:
 	CGO_ENABLED=0 go build -ldflags '-extldflags "-static"' -o bin/clh-auth cmd/main.go
 
